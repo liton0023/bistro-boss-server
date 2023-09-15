@@ -4,13 +4,34 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
-// const jwt=require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 const app = express();
 const port = process.env.PORT || 5000;
 
 // middleweres
 app.use(cors());
 app.use(express.json());
+
+const verifyJWt=(req,res,next)=>{
+  // console.log('heating the jwt')
+  const authorization=req.headers.authorization;
+  const token= authorization.split(' ')[1];
+  console.log(token)
+  if(!authorization){
+    return res.status(401).send({error:true,massage:'Unauthoriization'});
+  }
+  
+  // console.log(token)
+  jwt.verify(token,process.env.ACCESS_JWT,(err,decoded)=>{
+    if(err){
+      return res.status(401).send({error:true,massage:'Unauthoriization'});
+    }
+    req.decoded=decoded;
+    // console.log(decoded)
+    next();
+  })
+
+}
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.bzjru.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -33,6 +54,14 @@ async function run() {
     const cartCollection = client.db("bistroDb").collection("carts");
     const usersCollection = client.db("bistroDb").collection("users");
 
+    // jwt token acces
+
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_JWT, { expiresIn: "1h" });
+      res.send({token: token });
+    });
+
     // users collection apis
 
     app.get("/users", async (req, res) => {
@@ -53,17 +82,17 @@ async function run() {
       res.send(result);
     });
 
-    app.patch('users/admin/:id', async(req,res)=>{
-      const id=req.params.id;
-      const filter={_id: new ObjectId(id)};
-      const updatedDoc={
-        $set:{
-          role:'admin'
-        }
-      }
-      const result=  await  usersCollection.updateOne(filter,updatedDoc);
+    app.patch("/users/admin/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          role: "admin",
+        },
+      };
+      const result = await usersCollection.updateOne(filter, updatedDoc);
       res.send(result);
-    })
+    });
 
     // menu collection api
 
@@ -77,11 +106,19 @@ async function run() {
     });
 
     // cart collection api
-    app.get("/carts", async (req, res) => {
+    app.get("/carts",verifyJWt, async (req, res) => {
       const email = req.query.email;
+      // console.log('email',email)
       console.log(email);
+      
       if (!email) {
         res.send([]);
+      }
+
+      const decodedEmail = req.decoded.email;
+      console.log('decoded email:', decodedEmail)
+      if ( decodedEmail != email) {
+        return res.status(403).send({ error: true, message: 'forbidden access' })
       }
       const query = { email: email };
       const result = await cartCollection.find(query).toArray();
