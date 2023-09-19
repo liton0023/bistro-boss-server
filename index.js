@@ -153,16 +153,22 @@ async function run() {
     //  update menu
     app.patch('/menu/:id',verifyJWt, verifyAdmin,async(req,res)=>{
       const id =req.params.id;
+      const { name, price, category, recipe } = req.body;
       const filter ={_id: new ObjectId(id)};
       const updateDoc={
         $set:{
-          name:'',
-          category:'',
-          price:'',
-          recipe:''
+          name,
+          category,
+          price,
+          recipe
         }
       }
       const result= await menuCollection.updateOne(filter , updateDoc);
+      if (result.modifiedCount === 1) {
+        res.status(200).json({ message: "Item updated successfully" });
+      } else {
+        res.status(404).json({ message: "Item not found or not updated" });
+      }
       console.log(result)
       res.send(result);
     })
