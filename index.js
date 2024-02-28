@@ -144,22 +144,52 @@ async function run() {
       res.send(result)
     })
 
-    app.delete('/menu/:id', verifyJWt, verifyAdmin, async (req, res) => {
+    app.delete('/menu/:id',verifyJWt,verifyAdmin, async (req, res) => {
       const id = req.params.id;
+      console.log(id)
       const query = { _id: new ObjectId(id) }
       const result = await menuCollection.deleteOne(query);
+      console.log(result)
       res.send(result);
     })
 
 
-    //  update menu
-    // app.get('/menu/:id', verifyJWt ,verifyAdmin ,async(req ,res)=>{
-    //   const id =req.params.id;
-    //   console.log(id)
-    //   const result = await menuCollection.findOne(id);
-    //   res.send(result)
+    app.put('/menu/:id',verifyJWt,verifyAdmin,async(req,res)=>{
+      const id =req.params.id;
+      // console.log(id);
+      const filter ={_id: id};
+      const{name,price,category,wirter,imgUrl}=req.body;
+      // console.log(name);
+      const updateItem ={
+        name : name,
+        price :price,
+        wirter: wirter,
+        category : category ,
+        imgUrl : imgUrl
+      }
+      console.log(updateItem)
+      const option ={new : true};
 
-    // })
+      try{
+ 
+        const result = await menuCollection.replaceOne(filter,updateItem,option)
+        if(result.modifiedCount === 0){
+          console.log('Document replaced successfylly');
+        }
+        else{
+          console.log('Document not found or not replaced');
+        }
+        // console.log(result)
+      }
+      catch (err) {
+
+        console.error('Error replacing document:', err);
+      }
+
+
+
+
+    })
 
     app.put('/menu/:id',verifyJWt, verifyAdmin,async(req,res)=>{
       const id =req.params.id;
